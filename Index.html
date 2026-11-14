@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+      body { font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif; margin: 0; padding: 15px; background-color: #f4f6f9; color: #333; box-sizing: border-box; }
+      .container { width: 100%; max-width: 500px; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); margin: 10px auto; box-sizing: border-box; }
+      h2 { text-align: center; color: #0275d8; margin-top: 0; font-size: 24px; }
+      label { font-weight: 600; display: block; margin-top: 20px; margin-bottom: 8px; font-size: 16px; }
+      input[type="text"], input[type="email"], input[type="number"], select, textarea { width: 100%; padding: 14px; border: 2px solid #ced4da; border-radius: 8px; box-sizing: border-box; font-size: 16px; background-color: #fff; transition: border-color 0.2s; }
+      input[type="text"]:focus, input[type="email"]:focus, input[type="number"]:focus, select:focus, textarea:focus { border-color: #0275d8; outline: none; }
+      textarea { resize: vertical; }
+      .camera-box { width: 100%; max-width: 250px; border-radius: 8px; overflow: hidden; background: #000; position: relative; margin: 10px auto; border: 2px solid #ced4da; min-height: 180px; display: flex; align-items: center; justify-content: center; }
+      #videoFeed, #photoPreview { width: 100%; display: block; }
+      .upload-fallback { display: none; text-align: center; padding: 30px 15px; background: #f8f9fa; width: 100%; height: 100%; box-sizing: border-box; }
+      .upload-fallback span { font-size: 40px; display: block; margin-bottom: 10px; }
+      .upload-fallback p { margin: 0; font-weight: bold; color: #555; font-size: 16px; }
+      .upload-fallback small { color: #777; display: block; margin-bottom: 15px; }
+      input[type="file"] { max-width: 100%; font-size: 14px; }
+      .btn-cam { width: 100%; padding: 12px; background: #6f42c1; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 15px; cursor: pointer; margin-top: 10px; }
+      .btn-cam:hover { background: #59339d; }
+      .action-buttons { display: flex; gap: 12px; margin-top: 25px; }
+      .btn-submit { flex: 2; background-color: #0275d8; color: white; padding: 16px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(2, 117, 216, 0.2); }
+      .btn-clear { flex: 1; background-color: #6c757d; color: white; padding: 16px; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; }
+      .result-box { margin-top: 25px; padding: 20px; background-color: #e8f5e9; border-left: 6px solid #28a745; border-radius: 8px; display: none; text-align: center; }
+      .pending-box { margin-top: 25px; padding: 20px; background-color: #fff3cd; border-left: 6px solid #ffc107; border-radius: 8px; display: none; text-align: center; color: #856404; }
+      .key-display { font-family: 'Courier New', Courier, monospace; font-size: 22px; font-weight: bold; color: #1b5e20; margin-top: 15px; letter-spacing: 1px; background: white; padding: 12px; border-radius: 6px; border: 1px dashed #28a745; word-break: break-all; }
+      .btn-check-status { background-color: #ffc107; color: #856404; border: 2px solid #e0a800; padding: 12px 20px; font-weight: bold; border-radius: 8px; cursor: pointer; margin-top: 15px; font-size: 15px; width: 100%; box-sizing: border-box; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div style="text-align: center; margin-bottom: 15px;">
+        <img src="https://drive.google.com/thumbnail?id=1ojCplKaANjQBes_WLSJNSI2EMi7YAOzN&sz=w800" alt="GVSS Logo" style="max-height: 80px; width: auto; object-fit: contain;">
+      </div>
+      <h2>🔑 POS Key Generator</h2>
+      <hr style="border: 0; border-top: 1px solid #eee;">
+     
+      <label for="appType">Application Type:</label>
+      <select id="appType" onchange="handleAppTypeChange()">
+        <option value="Standalone Application (Desktop)">Standalone Application (Desktop)</option>
+        <option value="Web Application (Cloud)">Web Application (Cloud)</option>
+      </select>
+     
+      <label for="machineType">Type of Machine:</label>
+      <select id="machineType">
+        <option value="Apparel & Clothing POS">Apparel & Clothing POS</option>
+        <option value="Restaurant POS">Restaurant POS</option>
+        <option value="Retail POS">Retail POS</option>
+        <option value="Super Market">Super Market</option>
+      </select>
+
+
+      <label for="systemId" id="systemIdLabel">Enter System ID (MAC Address):</label>
+      <input type="text" id="systemId" placeholder="Enter System ID...">
+     
+      <label for="shopName">Shop / Establishment Name:</label>
+      <input type="text" id="shopName" placeholder="Enter Shop Name...">
+     
+      <label for="shopAddress">Shop / Establishment Address:</label>
+      <textarea id="shopAddress" placeholder="Enter Full Address..." rows="3"></textarea>
+     
+      <label for="areaPin">Area PIN:</label>
+      <input type="text" id="areaPin" placeholder="Enter Area PIN...">
+
+
+      <label for="paymentMethod">Payment Method:</label>
+      <select id="paymentMethod">
+        <option value="Online">Online Payment (Razorpay)</option>
+        <option value="Cash">Cash Payment</option>
+      </select>
+     
+      <label for="paymentAmount">Payment Amount (₹):</label>
+      <input type="number" id="paymentAmount" placeholder="Enter Total Amount (e.g. 10000)">
+     
+      <div id="invoiceTypeContainer" style="display: <?= showInvoice ? 'block' : 'none' ?>;">
+        <label for="invoiceType">Invoice Type:</label>
+        <select id="invoiceType">
+          <option value="GST">GST Invoice (18% Inclusive)</option>
+          <option value="Non-GST" selected>Non-GST Invoice</option>
+        </select>
+      </div>
+     
+      <label for="duration">License Duration:</label>
+      <select id="duration">
+        <option value="1">7 Days Demo (Instant)</option>
+        <option value="2">3 Months (Requires Approval)</option>
+        <option value="3">6 Months (Requires Approval)</option>
+        <option value="4" selected>12 Months (Requires Approval)</option>
+        <option value="5">Lifetime (Requires Approval)</option>
+      </select>
+     
+      <label>Capture System ID (Mandatory):</label>
+      <div class="camera-box">
+        <video id="videoFeed" autoplay playsinline></video>
+        <img id="photoPreview" style="display:none;" />
+        <div id="uploadFallback" class="upload-fallback">
+          <span>📁</span>
+          <p>Camera Not Found</p>
+          <small>Upload a photo instead.</small>
+          <input type="file" id="fileUpload" accept="image/*" onchange="handleFileUpload(event)">
+        </div>
+      </div>
+     
+      <button id="btnCapture" class="btn-cam" onclick="takePhoto()">📸 Capture Photo</button>
+      <button id="btnRetake" class="btn-cam" onclick="retakePhoto()" style="display:none; background:#dc3545;">🔄 Change Photo</button>
+
+
+      <div class="action-buttons">
+        <button id="submitBtn" class="btn-submit" onclick="requestLocationAndSubmit()">Submit Request</button>
+        <button class="btn-clear" onclick="resetForm()">🔄 Reset</button>
+      </div>
+     
+      <div id="resultBox" class="result-box">
+        <span id="resultTitle" style="font-weight: bold; font-size: 16px;">✅ LICENSE GENERATED</span>
+        <div id="licenseKey" class="key-display">-----</div>
+      </div>
+
+
+      <div id="pendingBox" class="pending-box">
+        <span style="font-weight: bold; font-size: 16px;">⏳ APPROVAL REQUIRED</span>
+        <div id="pendingMessage" style="margin-top: 8px; font-size: 15px; line-height: 1.4;"></div>
+        <button id="checkStatusBtn" class="btn-check-status" onclick="checkCurrentRequestStatus()">🔄 Check If Approved</button>
+      </div>
+    </div>
+
+
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+
+    <script>
+      var CURRENT_ENV = "<?= env ?>"; // Dynamically injected from doGet
+      var currentRequestId = "";
+      var capturedPhotoBase64 = null;
+      var videoStream = null;
+      var usingUploadFallback = false;
+
+
+      window.onload = function() {
+        startCamera();
+        handleAppTypeChange();
+      };
+
+
+      function handleAppTypeChange() {
+        var appType = document.getElementById('appType').value;
+        var sysIdLabel = document.getElementById('systemIdLabel');
+        var sysIdInput = document.getElementById('systemId');
+       
+        if (appType === "Web Application (Cloud)") {
+          sysIdLabel.innerText = "Enter Registered Email ID:";
+          sysIdInput.type = "email";
+          sysIdInput.placeholder = "Enter Email ID...";
+        } else {
+          sysIdLabel.innerText = "Enter System ID (MAC Address):";
+          sysIdInput.type = "text";
+          sysIdInput.placeholder = "Enter System ID...";
+        }
+      }
+
+
+      function startCamera() {
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+          navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+            .then(function(stream) {
+              videoStream = stream;
+              document.getElementById('videoFeed').srcObject = stream;
+            })
+            .catch(function(err) {
+              triggerUploadFallback();
+            });
+        } else {
+          triggerUploadFallback();
+        }
+      }
+
+
+      function triggerUploadFallback() {
+        usingUploadFallback = true;
+        document.getElementById('videoFeed').style.display = 'none';
+        document.getElementById('btnCapture').style.display = 'none';
+        document.getElementById('uploadFallback').style.display = 'block';
+      }
+
+
+      function handleFileUpload(event) {
+        var file = event.target.files[0];
+        if (!file) return;
+
+
+        var reader = new FileReader();
+        reader.onload = function(e) {
+          var img = new Image();
+          img.onload = function() {
+            var canvas = document.createElement('canvas');
+            var MAX_WIDTH = 400;
+            var scaleSize = MAX_WIDTH / img.width;
+            canvas.width = MAX_WIDTH;
+            canvas.height = img.height * scaleSize;
+           
+            var ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+           
+            capturedPhotoBase64 = canvas.toDataURL('image/png');
+           
+            document.getElementById('photoPreview').src = capturedPhotoBase64;
+            document.getElementById('photoPreview').style.display = 'block';
+            document.getElementById('uploadFallback').style.display = 'none';
+            document.getElementById('btnRetake').style.display = 'block';
+          }
+          img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+
+
+      function takePhoto() {
+        var video = document.getElementById('videoFeed');
+        if (!videoStream) return;
+       
+        var canvas = document.createElement('canvas');
+        canvas.width = 320;
+        canvas.height = (video.videoHeight / video.videoWidth) * 320;
+       
+        var context = canvas.getContext('2d');
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+       
+        capturedPhotoBase64 = canvas.toDataURL('image/png');
+       
+        document.getElementById('photoPreview').src = capturedPhotoBase64;
+        document.getElementById('photoPreview').style.display = 'block';
+        video.style.display = 'none';
+       
+        document.getElementById('btnCapture').style.display = 'none';
+        document.getElementById('btnRetake').style.display = 'block';
+      }
+
+
+      function retakePhoto() {
+        capturedPhotoBase64 = null;
+        document.getElementById('photoPreview').style.display = 'none';
+        document.getElementById('btnRetake').style.display = 'none';
+       
+        if (usingUploadFallback) {
+          document.getElementById('uploadFallback').style.display = 'block';
+          document.getElementById('fileUpload').value = "";
+        } else {
+          document.getElementById('videoFeed').style.display = 'block';
+          document.getElementById('btnCapture').style.display = 'block';
+        }
+      }
+
+
+      function requestLocationAndSubmit() {
+        var appType = document.getElementById('appType').value;
+        var machineType = document.getElementById('machineType').value;
+        var idInput = document.getElementById('systemId').value.trim();
+        var shopName = document.getElementById('shopName').value.trim();
+        var shopAddress = document.getElementById('shopAddress').value.trim();
+        var areaPin = document.getElementById('areaPin').value.trim();
+        var paymentMethod = document.getElementById('paymentMethod').value;
+        var paymentAmount = document.getElementById('paymentAmount').value.trim();
+       
+        var invoiceType = document.getElementById('invoiceType').value;
+        var durationInput = document.getElementById('duration').value;
+        var submitBtn = document.getElementById('submitBtn');
+
+
+        if (!idInput || !shopName || !shopAddress || !areaPin) {
+          alert("Please fill in System ID (or Email), Shop Name, Address, and Area PIN.");
+          return;
+        }
+
+
+        if (!paymentAmount || isNaN(paymentAmount) || Number(paymentAmount) <= 0) {
+          alert("Please enter a valid Payment Amount.");
+          return;
+        }
+       
+        if (!capturedPhotoBase64) {
+          alert("A photo is required. Please capture or upload a photo of the System ID before submitting.");
+          return;
+        }
+
+
+        submitBtn.innerText = "Locating...";
+        submitBtn.disabled = true;
+
+
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            function(position) {
+              var exactLocation = position.coords.latitude + ", " + position.coords.longitude;
+              submitDataToBackend(idInput, durationInput, exactLocation, capturedPhotoBase64, shopName, shopAddress, machineType, areaPin, paymentMethod, paymentAmount, invoiceType, appType);
+            },
+            function(error) {
+              var errorMsg = "Location Error";
+              if (error.code === error.PERMISSION_DENIED) errorMsg = "User Denied Permission";
+              if (error.code === error.POSITION_UNAVAILABLE) errorMsg = "GPS Network Unavailable";
+              if (error.code === error.TIMEOUT) errorMsg = "Request Timed Out";
+             
+              alert("Location capture failed: " + errorMsg + "\nSubmitting request without location.");
+              submitDataToBackend(idInput, durationInput, errorMsg, capturedPhotoBase64, shopName, shopAddress, machineType, areaPin, paymentMethod, paymentAmount, invoiceType, appType);
+            },
+            { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+          );
+        } else {
+          submitDataToBackend(idInput, durationInput, "Browser Not Supported", capturedPhotoBase64, shopName, shopAddress, machineType, areaPin, paymentMethod, paymentAmount, invoiceType, appType);
+        }
+      }
+
+
+      function submitDataToBackend(idInput, durationInput, locationStr, photoData, shopName, shopAddress, machineType, areaPin, paymentMethod, paymentAmount, invoiceType, appType) {
+        var resultBox = document.getElementById('resultBox');
+        var pendingBox = document.getElementById('pendingBox');
+        var keyDisplay = document.getElementById('licenseKey');
+        var pendingMsg = document.getElementById('pendingMessage');
+        var resultTitle = document.getElementById('resultTitle');
+        var submitBtn = document.getElementById('submitBtn');
+       
+        resultBox.style.display = "none";
+        pendingBox.style.display = "none";
+        currentRequestId = "";
+        submitBtn.innerText = "Uploading Photo & Request...";
+       
+        google.script.run
+          .withSuccessHandler(function(response) {
+            submitBtn.innerText = "Submit Request";
+            submitBtn.disabled = false;
+           
+            if (response.status === "APPROVED") {
+              resultTitle.innerText = "✅ DEMO LICENSE GENERATED";
+              keyDisplay.innerText = response.key;
+              resultBox.style.display = "block";
+            }
+            else if (response.status === "PAYMENT_REQUIRED") {
+              currentRequestId = response.requestId;
+             
+              var options = {
+                "key": "YOUR_KEY_ID",
+                "amount": response.amount,
+                "currency": "INR",
+                "name": "GVSS Software",
+                "description": "License Activation",
+                "order_id": response.orderId,
+                "handler": function (payment_response) {
+                    pendingMsg.innerHTML = "✅ <b>Payment Successful!</b><br>Your license key has been emailed to you.<br>Request ID: " + currentRequestId;
+                    pendingBox.style.display = "block";
+                    pendingBox.style.backgroundColor = "#e8f5e9";
+                    pendingBox.style.borderLeftColor = "#28a745";
+                    pendingBox.style.color = "#1b5e20";
+                },
+                "prefill": { "name": "", "email": "", "contact": "" },
+                "theme": { "color": "#0275d8" }
+              };
+              var rzp = new Razorpay(options);
+              rzp.on('payment.failed', function (resp){
+                alert("Payment Failed: " + resp.error.description);
+                pendingMsg.innerText = "Payment failed or cancelled. You can try again later, or wait for manual admin approval. Request ID: " + currentRequestId;
+                pendingBox.style.display = "block";
+              });
+              rzp.open();
+            }
+            else {
+              currentRequestId = response.requestId;
+              pendingMsg.innerText = response.message;
+              pendingBox.style.display = "block";
+            }
+          })
+          .withFailureHandler(function(err) {
+            submitBtn.innerText = "Submit Request";
+            submitBtn.disabled = false;
+            alert("System Error: " + err.message);
+          })
+          .requestKeyFromPython(idInput, durationInput, locationStr, photoData, shopName, shopAddress, machineType, areaPin, paymentMethod, paymentAmount, invoiceType, appType, CURRENT_ENV);
+      }
+
+
+      function checkCurrentRequestStatus() {
+        if (!currentRequestId) return;
+        var checkBtn = document.getElementById('checkStatusBtn');
+        checkBtn.innerText = "Checking...";
+       
+        google.script.run
+          .withSuccessHandler(function(response) {
+            checkBtn.innerText = "🔄 Check If Approved";
+            if (response.status === "APPROVED") {
+              document.getElementById('pendingBox').style.display = "none";
+              document.getElementById('resultTitle').innerText = "✅ PAID LICENSE APPROVED";
+              document.getElementById('licenseKey').innerText = response.key;
+              document.getElementById('resultBox').style.display = "block";
+            } else {
+              alert("Your request (" + currentRequestId + ") is still pending admin approval or payment.");
+            }
+          })
+          .withFailureHandler(function(err) {
+            checkBtn.innerText = "🔄 Check If Approved";
+            alert("Error checking status: " + err.message);
+          })
+          .checkRequestStatus(currentRequestId, CURRENT_ENV);
+      }
+
+
+      function resetForm() {
+        document.getElementById('appType').value = 'Standalone Application (Desktop)';
+        handleAppTypeChange();
+        document.getElementById('machineType').value = 'Apparel & Clothing POS';
+        document.getElementById('systemId').value = '';
+        document.getElementById('shopName').value = '';
+        document.getElementById('shopAddress').value = '';
+        document.getElementById('areaPin').value = '';
+        document.getElementById('paymentMethod').value = 'Online';
+        document.getElementById('paymentAmount').value = '';
+        document.getElementById('invoiceType').value = 'Non-GST';
+        document.getElementById('duration').value = '4';
+        document.getElementById('resultBox').style.display = 'none';
+       
+        var pendingBox = document.getElementById('pendingBox');
+        pendingBox.style.display = 'none';
+        pendingBox.style.backgroundColor = '#fff3cd';
+        pendingBox.style.borderLeftColor = '#ffc107';
+        pendingBox.style.color = '#856404';
+       
+        currentRequestId = "";
+        retakePhoto();
+      }
+    </script>
+  </body>
+</html>

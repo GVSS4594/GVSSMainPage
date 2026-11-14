@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<!-- 
+  Application: Admin Dashboard - POS Manager
+  File: Admin.html
+  Version: v1.5
+  Last Updated: 2026-10-21 17:20
+  Description: Admin panel with live/staging environment radio toggle and request count notification.
+-->
+<html lang="en">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard - POS Manager</title>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; color: #333; }
+    .container { max-width: 1200px; margin: 0 auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
+    h2 { color: #0275d8; margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+    
+    .env-toolbar { display: flex; align-items: center; gap: 12px; background: #e9ecef; padding: 6px 14px; border-radius: 8px; font-size: 14px; font-weight: normal; }
+    .env-toolbar label { cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 600; }
+    .request-count-badge { background: #0275d8; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; margin-left: 5px; }
+
+    .manual-box { background: #e9ecef; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
+    .manual-box input[type="text"], .manual-box select { padding: 10px; border: 1px solid #ced4da; border-radius: 6px; outline: none; }
+    .manual-box input[type="text"]:focus, .manual-box select:focus { border-color: #0275d8; }
+    
+    .btn { padding: 10px 15px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; transition: 0.2s; color: white; }
+    .btn-primary { background: #0275d8; }
+    .btn-primary:hover { background: #025aa5; }
+    .btn-success { background: #28a745; }
+    .btn-success:hover { background: #218838; }
+    .btn-danger { background: #dc3545; }
+    .btn-danger:hover { background: #c82333; }
+    .btn-toolbar { display: flex; gap: 10px; margin-bottom: 15px; }
+
+    .table-responsive { overflow-x: auto; border-radius: 8px; border: 1px solid #dee2e6; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 900px; }
+    th, td { padding: 12px 15px; border-bottom: 1px solid #dee2e6; text-align: left; vertical-align: middle; }
+    th { background-color: #f8f9fa; font-weight: 600; color: #495057; white-space: nowrap; }
+    tr:hover { background-color: #f1f3f5; }
+    
+    .badge { padding: 5px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; display: inline-block; }
+    .badge-pending { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+    .badge-approved { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+    
+    .key-text { font-family: 'Courier New', Courier, monospace; font-weight: bold; color: #0275d8; letter-spacing: 0.5px; }
+    .shop-details { font-size: 13px; line-height: 1.4; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h2>
+      <span>🛡️ License Admin Dashboard</span>
+      
+      <!-- Environment Radio Toggle & Total Request Counter -->
+      <div class="env-toolbar">
+        <span>Environment:</span>
+        <label><input type="radio" name="envRadio" value="LIVE" checked onchange="switchEnvironment('LIVE')"> Live</label>
+        <label><input type="radio" name="envRadio" value="STAGING" onchange="switchEnvironment('STAGING')"> Staging</label>
+        <span id="requestCountBadge" class="request-count-badge">Total: 0</span>
+      </div>
+
+      <a href="<?= ScriptApp.getService().getUrl() ?>" target="_top" style="font-size: 14px; color: #6c757d; text-decoration: none;">&larr; Back to Store</a>
+    </h2>
+
+    <div class="manual-box" style="background: #e8f5e9; border: 1px solid #c3e6cb;">
+      <strong style="color: #155724;">Frontend Form Settings:</strong>
+      <label style="cursor: pointer; display: flex; align-items: center; gap: 8px;">
+        <input type="checkbox" id="toggleInvoice" <?= showInvoice ? 'checked' : '' ?> onchange="updateInvoiceSetting(this.checked)" style="width: 18px; height: 18px;">
+        Show "Invoice Type" Dropdown to Users
+      </label>
+      <span id="settingStatus" style="font-size: 13px; color: #155724; font-weight: bold; display: none; margin-left: 15px;">✅ Saved!</span>
+    </div>
+
+    <div class="manual-box">
+      <strong style="color: #495057;">Manual Generator:</strong>
+      <select id="adminAppType" onchange="updateAdminInputPlaceholder()">
+        <option value="Standalone Application (Desktop)">Standalone (Desktop)</option>
+        <option value="Web Application (Cloud)">Web App (Cloud)</option>
+      </select>
+      <select id="adminMachineType">
+        <option value="Apparel & Clothing POS">Apparel & Clothing POS</option>
+        <option value="Restaurant POS">Restaurant POS</option>
+        <option value="Retail POS">Retail POS</option>
+        <option value="Super Market">Super Market</option>
+      </select>
+      <input type="text" id="adminSysId" placeholder="Enter System ID...">
+      <select id="adminDuration">
+        <option value="1">7 Days Demo</option>
+        <option value="2">3 Months</option>
+        <option value="3">6 Months</option>
+        <option value="4" selected>12 Months</option>
+        <option value="5">Lifetime</option>
+      </select>
+      <button class="btn btn-primary" onclick="manualGenerate()" id="btnManual">Generate Key</button>
+    </div>
+
+    <div class="btn-toolbar">
+      <button class="btn btn-primary" onclick="loadRequests()">🔄 Refresh List</button>
+      <button class="btn btn-danger" onclick="deleteSelected()">🗑️ Delete Selected</button>
+    </div>
+
+    <div class="table-responsive">
+      <table id="requestsTable">
+        <thead>
+          <tr>
+            <th style="width: 40px;"><input type="checkbox" id="selectAll" onclick="toggleAllCheckboxes()"></th>
+            <th>Date & Time</th>
+            <th>Shop / Payment Details</th>
+            <th>System / Email ID</th>
+            <th>Duration</th>
+            <th>Status</th>
+            <th>License Key</th>
+            <th>Photo / GPS</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <tr><td colspan="9" style="text-align:center; padding: 30px;">Loading requests...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    // Global active environment controlled by radio buttons (defaults to LIVE)
+    var CURRENT_ENV = "LIVE";
+
+    window.onload = function() {
+      loadRequests();
+    };
+
+    function switchEnvironment(env) {
+      CURRENT_ENV = env;
+      loadRequests();
+    }
+
+    function updateAdminInputPlaceholder() {
+      let type = document.getElementById('adminAppType').value;
+      let input = document.getElementById('adminSysId');
+      if(type === 'Web Application (Cloud)') {
+        input.placeholder = "Enter Email ID...";
+      } else {
+        input.placeholder = "Enter System ID...";
+      }
+    }
+
+    function updateInvoiceSetting(isChecked) {
+      let statusText = document.getElementById('settingStatus');
+      statusText.style.display = 'none';
+      google.script.run
+        .withSuccessHandler(function() {
+          statusText.style.display = 'inline';
+          setTimeout(() => statusText.style.display = 'none', 2500);
+        })
+        .toggleInvoiceVisibility(isChecked);
+    }
+
+    function loadRequests() {
+      document.getElementById('tableBody').innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 30px;">Loading data from ' + CURRENT_ENV + '...</td></tr>';
+      
+      google.script.run
+        .withSuccessHandler(function(data) {
+          // Update total request notification counter badge
+          let totalCount = (data && Array.isArray(data)) ? data.length : 0;
+          document.getElementById('requestCountBadge').innerText = "Total: " + totalCount;
+          renderTable(data);
+        })
+        .withFailureHandler(err => alert("Error loading data: " + err.message))
+        .getAllRequests(CURRENT_ENV);
+    }
+
+    function renderTable(data) {
+      let tbody = document.getElementById('tableBody');
+      tbody.innerHTML = '';
+      
+      if (!data || data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 30px; color: #6c757d;">No requests found in database.</td></tr>';
+        return;
+      }
+
+      data.forEach(row => {
+        let isApproved = row.status === 'APPROVED';
+        let statusBadge = isApproved 
+          ? `<span class="badge badge-approved">APPROVED</span>` 
+          : `<span class="badge badge-pending">${row.status}</span>`;
+        
+        let safeClientIdentifier = String(row.clientIdentifier).replace(/'/g, "\\\'");
+        let safeMachineType = String(row.machineType).replace(/'/g, "\\\'");
+
+        let actionBtn = !isApproved 
+          ? `<button class="btn btn-success" style="padding: 5px 10px; font-size: 12px;" onclick="approveRequest(${row.rowIndex}, '${safeClientIdentifier}', '${row.duration}', '${safeMachineType}')">Approve</button>` 
+          : `<span style="color:#aaa;">-</span>`;
+          
+        let billBtn = `<button class="btn btn-primary" style="padding: 5px 10px; font-size: 12px; margin-left: 5px;" onclick="downloadInvoice('${row.requestId}', event)">📄 Bill</button>`;
+        
+        let photoDisplay = (row.photoUrl && row.photoUrl !== 'No Photo' && row.photoUrl !== 'N/A') 
+          ? `<a href="${row.photoUrl}" target="_blank" style="color: #0275d8; text-decoration: none; font-weight: bold;">View 📸</a>` 
+          : `<span style="color:#aaa;">No Photo</span>`;
+
+        let locText = row.location;
+        let locationDisplay = "";
+        
+        if (locText.includes(',') && !locText.includes('Error') && !locText.includes('Denied') && !locText.includes('Browser')) {
+            locationDisplay = `<a href="https://www.google.com/maps?q=${encodeURIComponent(locText)}" target="_blank" style="color: #28a745; text-decoration: none; font-weight: bold; margin-top: 4px; display: inline-block;">📍 Map</a>`;
+        } else if (locText === "Unknown" || locText === "Admin Generated") {
+            locationDisplay = `<span style="color:#aaa; font-size: 11px; margin-top: 4px; display: inline-block;">No GPS</span>`;
+        } else {
+            locationDisplay = `<span style="color:#dc3545; font-size: 11px; margin-top: 4px; display: inline-block;" title="${locText}">GPS Failed</span>`;
+        }
+
+        let shopDisplay = `<div class="shop-details">
+                            <strong>${row.shopName}</strong><br>
+                            <span style="color: #6c757d; font-size:11px;">${row.shopAddress}</span><br>
+                            <span style="color: #6c757d;">${row.machineType} | PIN: ${row.areaPin}</span><br>
+                            <span style="color: #0275d8; font-weight: bold;">₹${row.paymentAmount}</span> <span style="color: #6c757d;">| ${row.paymentMethod} | ${row.invoiceType}</span>
+                           </div>`;
+
+        let isWeb = row.appType.includes('Web');
+        let appBadgeStyle = isWeb ? 'background: #e3f2fd; color: #0d47a1; border: 1px solid #bbdefb;' : 'background: #f8f9fa; color: #495057; border: 1px solid #dee2e6;';
+        let appBadgeText = isWeb ? '☁️ Web App' : '💻 Desktop App';
+
+        let tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><input type="checkbox" class="row-checkbox" value="${row.requestId}"></td>
+          <td style="font-size: 12px; color: #6c757d;">${row.timestamp}</td>
+          <td>${shopDisplay}</td>
+          <td>
+            <div style="font-family: monospace; font-size: 13px;">${row.clientIdentifier}</div>
+            <span style="font-size: 10px; padding: 2px 5px; border-radius: 4px; display: inline-block; margin-top: 4px; ${appBadgeStyle}">${appBadgeText}</span>
+          </td>
+          <td>${row.duration}</td>
+          <td>${statusBadge}</td>
+          <td class="key-text">${row.key || '-'}</td>
+          <td style="font-size: 12px; color: #6c757d;">${photoDisplay}<br>${locationDisplay}</td>
+          <td>${actionBtn} ${billBtn}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+      
+      document.getElementById('selectAll').checked = false;
+    }
+
+    function approveRequest(rowIndex, sysId, durationCode, machineType) {
+      if (confirm(`Are you sure you want to approve this request and generate a ${durationCode} key for ${machineType} in [${CURRENT_ENV}]?`)) {
+        google.script.run
+          .withSuccessHandler(() => {
+            alert("✅ Key generated successfully!");
+            loadRequests();
+          })
+          .withFailureHandler((err) => {
+            alert("❌ Approval Failed: " + err.message); 
+          })
+          .approveFromAdminPanel(rowIndex, sysId, durationCode, machineType, CURRENT_ENV);
+      }
+    }
+
+    function manualGenerate() {
+      let sysId = document.getElementById('adminSysId').value.trim();
+      let durationChoice = document.getElementById('adminDuration').value;
+      let machineType = document.getElementById('adminMachineType').value;
+      let appType = document.getElementById('adminAppType').value;
+      let btn = document.getElementById('btnManual');
+      
+      if (!sysId) {
+        alert("Please enter a System ID or Email.");
+        return;
+      }
+      
+      btn.innerText = "Generating...";
+      btn.disabled = true;
+
+      google.script.run
+        .withSuccessHandler((key) => {
+          btn.innerText = "Generate Key";
+          btn.disabled = false;
+          document.getElementById('adminSysId').value = '';
+          alert("✅ Key Generated in [" + CURRENT_ENV + "]: " + key);
+          loadRequests();
+        })
+        .adminGenerateKey(sysId, durationChoice, "Admin Generated", machineType, appType, CURRENT_ENV);
+    }
+
+    function downloadInvoice(reqId, event) {
+      let btn = event.target;
+      let originalText = btn.innerText;
+      btn.innerText = "⏳...";
+      btn.disabled = true;
+
+      google.script.run
+        .withSuccessHandler(function(base64Data) {
+          btn.innerText = originalText;
+          btn.disabled = false;
+          if(!base64Data) {
+            alert("Error generating invoice PDF.");
+            return;
+          }
+          const link = document.createElement('a');
+          link.href = 'data:application/pdf;base64,' + base64Data;
+          link.download = 'Invoice_' + CURRENT_ENV + '_' + reqId + '.pdf';
+          link.click();
+        })
+        .withFailureHandler(function(err) {
+          btn.innerText = originalText;
+          btn.disabled = false;
+          alert("System Error: " + err.message);
+        })
+        .generateInvoicePDFBase64(reqId, CURRENT_ENV);
+    }
+
+    function toggleAllCheckboxes() {
+      let isChecked = document.getElementById('selectAll').checked;
+      let checkboxes = document.querySelectorAll('.row-checkbox');
+      checkboxes.forEach(box => box.checked = isChecked);
+    }
+
+    function deleteSelected() {
+      let checkboxes = document.querySelectorAll('.row-checkbox:checked');
+      let selectedIds = Array.from(checkboxes).map(box => box.value);
+      
+      if (selectedIds.length === 0) {
+        alert("Please select at least one row to delete.");
+        return;
+      }
+      
+      if (confirm(`Are you sure you want to permanently delete ${selectedIds.length} request(s) from [${CURRENT_ENV}]?`)) {
+        google.script.run
+          .withSuccessHandler(() => {
+            loadRequests();
+          })
+          .deleteMultipleRequests(selectedIds, CURRENT_ENV);
+      }
+    }
+  </script>
+</body>
+</html>
